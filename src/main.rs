@@ -33,6 +33,6 @@ fn main() {
 
         renderer.draw(&map);
         // listen event
-        thread::sleep(Duration::from_millis(20));
+        // thread::sleep(Duration::from_millis(1000));
     }
 }

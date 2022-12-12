@@ -107,6 +107,10 @@ impl Map {
                 }
 
                 // TODO: Add
+                for o in &mut self.objects {
+                    // panic!("?????????????????");
+                    o.do_actions(&e);
+                }
 
                 // if let Ok(e) = &e.next() {
                 //     if let Event::Key(key) = &e {

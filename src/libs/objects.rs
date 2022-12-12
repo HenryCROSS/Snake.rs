@@ -51,9 +51,11 @@ pub trait Object_ops {
     fn get_weights(&self) -> i64;
     fn set_weights(&mut self, weights: i64);
 
-    fn do_actions(&mut self, e: &Input_Events) -> Result<(), Actions_State> {
-        Err(Actions_State::No_Action)
+    fn do_actions(&mut self, e: &Input_Events) -> Result<(), String> {
+        Ok(())
     }
+
+    fn conflict(&mut self, obj: Box<dyn Object_ops>){}
 }
 
 pub struct Snake {
@@ -86,8 +88,10 @@ impl Object_ops for Snake {
         self.properties.symbol
     }
 
+    // XXX: How to save the pop_back one if it ate the food
     fn set_x_y(&mut self, x: i32, y: i32) {
         self.body.push_front((x, y));
+        self.body.pop_back();
     }
 
     fn get_name(&self) -> &String {
@@ -118,27 +122,41 @@ impl Object_ops for Snake {
         self.properties.weights = weights;
     }
 
-    fn do_actions(&mut self, e: &Input_Events) -> Result<(), Actions_State> {
+    fn do_actions(&mut self, e: &Input_Events) -> Result<(), String> {
         if let Input_Events::Input(e) = e {
+            // unimplemented!()
             if let event::Event::Key(key) = e {
                 let key = key.code;
                 let vec_xy = self.get_x_y();
-                let (x,y) = vec_xy[0];
-                self.set_x_y(x, y - 1);
+                let (x, y) = vec_xy[0];
 
                 // wasd for moving
                 match key {
                     event::KeyCode::Char('w') => {
+                        self.set_x_y(x, y - 1);
                     }
-                    _=>{}
+                    event::KeyCode::Char('s') => {
+                        self.set_x_y(x, y + 1);
+                    }
+                    event::KeyCode::Char('a') => {
+                        self.set_x_y(x - 1, y);
+                    }
+                    event::KeyCode::Char('d') => {
+                        self.set_x_y(x + 1, y);
+                    }
+                    _ => {}
                 }
             };
         } else {
             // When tick
-            unimplemented!();
+            // unimplemented!();
         }
 
         Ok(())
+    }
+
+    fn conflict(&mut self, obj: Box<dyn Object_ops>) {
+        
     }
 }
 
@@ -203,5 +221,9 @@ impl Object_ops for Food {
 
     fn set_weights(&mut self, weights: i64) {
         self.properties.weights = weights;
+    }
+
+    fn conflict(&mut self, obj: Box<dyn Object_ops>) {
+        self.properties.state = State::Killed;
     }
 }
