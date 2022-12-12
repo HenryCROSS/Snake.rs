@@ -5,11 +5,8 @@ use crossterm::terminal::disable_raw_mode;
 use crossterm::terminal::EnterAlternateScreen;
 use crossterm::terminal::LeaveAlternateScreen;
 use crossterm::{execute, terminal::enable_raw_mode};
-use tui::buffer::Cell;
-use tui::style::Modifier;
 use std::{
     io::{self, Write},
-    ops,
 };
 use tui::backend::Backend;
 use tui::backend::CrosstermBackend;
@@ -30,13 +27,14 @@ impl Renderer {
         execute!(stdout, EnterAlternateScreen, EnableMouseCapture).unwrap();
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend).unwrap();
+        terminal.hide_cursor().unwrap();
 
         Renderer { terminal }
     }
 
     pub fn draw(&mut self, map: &Map) {
         let bckend = self.terminal.backend_mut();
-        let (top, bottom, left, right) = map.get_map_properties();
+        let (_, bottom, _, right) = map.get_map_properties();
         let map = map.get_map();
         // let items = Vec::new();
 
@@ -54,7 +52,7 @@ impl Renderer {
                 let a = map[(right * y + x) as usize];
                 let mut b = [0; 2];
                 a.encode_utf8(&mut b);
-                bckend.write(&b);
+                bckend.write(&b).expect("write error");
             }
         }
 

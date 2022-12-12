@@ -1,8 +1,13 @@
 use std::{collections::VecDeque, sync::Mutex};
 
+use crossterm::event;
 use lazy_static::lazy_static;
 
-lazy_static!{
+use crate::actions;
+
+use super::{actions::Actions_State, events::Input_Events};
+
+lazy_static! {
     static ref NUM: Mutex<u64> = Mutex::new(0);
 }
 
@@ -16,13 +21,14 @@ struct Object {
     name: String,
     symbol: char,
     state: State,
+    weights: i64,
 }
 
 fn id_generator() -> u64 {
     let mut num = NUM.lock().unwrap();
     let new_id = *num;
     *num += 1;
-    return new_id
+    return new_id;
 }
 
 pub trait Object_ops {
@@ -41,6 +47,13 @@ pub trait Object_ops {
     fn set_state(&mut self, state: State);
 
     fn get_id(&self) -> u64;
+
+    fn get_weights(&self) -> i64;
+    fn set_weights(&mut self, weights: i64);
+
+    fn do_actions(&mut self, e: &Input_Events) -> Result<(), Actions_State> {
+        Err(Actions_State::No_Action)
+    }
 }
 
 pub struct Snake {
@@ -54,7 +67,8 @@ impl Snake {
             name,
             symbol,
             state,
-            id: id_generator()
+            id: id_generator(),
+            weights: 10,
         };
 
         let mut body = VecDeque::new();
@@ -95,6 +109,37 @@ impl Object_ops for Snake {
     fn get_id(&self) -> u64 {
         self.properties.id
     }
+
+    fn get_weights(&self) -> i64 {
+        self.properties.weights
+    }
+
+    fn set_weights(&mut self, weights: i64) {
+        self.properties.weights = weights;
+    }
+
+    fn do_actions(&mut self, e: &Input_Events) -> Result<(), Actions_State> {
+        if let Input_Events::Input(e) = e {
+            if let event::Event::Key(key) = e {
+                let key = key.code;
+                let vec_xy = self.get_x_y();
+                let (x,y) = vec_xy[0];
+                self.set_x_y(x, y - 1);
+
+                // wasd for moving
+                match key {
+                    event::KeyCode::Char('w') => {
+                    }
+                    _=>{}
+                }
+            };
+        } else {
+            // When tick
+            unimplemented!();
+        }
+
+        Ok(())
+    }
 }
 
 pub struct Food {
@@ -109,7 +154,8 @@ impl Food {
             name,
             symbol,
             state,
-            id: id_generator()
+            id: id_generator(),
+            weights: 0,
         };
 
         Food { properties, x, y }
@@ -149,5 +195,13 @@ impl Object_ops for Food {
 
     fn get_id(&self) -> u64 {
         self.properties.id
+    }
+
+    fn get_weights(&self) -> i64 {
+        self.properties.weights
+    }
+
+    fn set_weights(&mut self, weights: i64) {
+        self.properties.weights = weights;
     }
 }
