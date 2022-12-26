@@ -1,5 +1,6 @@
 pub enum Effect {
     Eat,
+    SneakEatSneak,
     None
 }
 

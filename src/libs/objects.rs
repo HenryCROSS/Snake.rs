@@ -11,6 +11,7 @@ lazy_static! {
 
 pub enum State {
     Alive,
+    AteFood,
     Killed,
 }
 
@@ -19,6 +20,7 @@ impl fmt::Display for State {
         match self {
             State::Alive => write!(f, "Alive"),
             State::Killed => write!(f, "Killed"),
+            Self::AteFood => write!(f, "AteFood"),
         }
     }
 }
@@ -153,7 +155,11 @@ impl Object_ops for Snake {
     // XXX: How to save the pop_back one if it ate the food
     fn set_x_y(&mut self, x: i32, y: i32) {
         self.body.push_front((x, y));
-        self.body.pop_back();
+        if let State::AteFood = self.get_state() {
+            self.set_state(State::Alive);
+        } else {
+            self.body.pop_back();
+        }
     }
 
     fn get_name(&self) -> &String {
@@ -221,27 +227,16 @@ impl Object_ops for Snake {
         Ok(())
     }
 
+    fn trigger_effect(&mut self) -> Effect {
+        Effect::SneakEatSneak
+        // Effect::None
+    }
+
     fn apply_effect(&mut self, effect: Effect) {
         if let Effect::Eat = effect {
-            let vec_xy = self.get_x_y();
-            let (x, y) = vec_xy.first().unwrap();
-            match self.direction {
-                Snake_direction::Up => {
-                    self.body.push_back((*x, (self.properties.right + *y + 1) % self.properties.right))
-                }
-                Snake_direction::Down => {
-                    self.body.push_back((*x, (self.properties.right + *y - 1) % self.properties.right))
-                }
-                Snake_direction::Left => {
-                    self.body.push_back(((self.properties.right + *x + 1) % self.properties.right, *y))
-                    // self.set_x_y((self.properties.right + *x - 1) % self.properties.right, *y)
-                }
-                Snake_direction::Right => {
-                    self.body.push_back(((self.properties.right + *x - 1) % self.properties.right, *y))
-                    // self.set_x_y((self.properties.right + *x + 1) % self.properties.right, *y)
-                }
-                Snake_direction::None => {},
-            }
+            self.set_state(State::AteFood)
+        } else if let Effect::SneakEatSneak = effect{
+            self.set_state(State::Killed)
         }
     }
 

@@ -128,18 +128,22 @@ impl Map {
 
         for coord in self.conflict_coor_list.pop() {
             // let conflict = objs.get_mut(&coord).unwrap();
-            // BUG: somehow the len() is 1 and it should be at least 2
-            // guess: maybe the coor is wrong?
             let mut conflict: Vec<_> = self.objects.iter_mut().filter(|o| {
-                let (x, y)= o.get_x_y().first().unwrap().clone();
-                log(file!(), line!().to_string().as_str(), o.get_symbol().to_string().as_str());
-                log(file!(), line!().to_string().as_str(), ("x: ".to_string()+x.to_string().as_str()).as_str());
-                log(file!(), line!().to_string().as_str(), ("y: ".to_string()+y.to_string().as_str()).as_str());
-                if x == coord.0 && y == coord.1{
-                    true
-                } else {
-                    false
-                }
+                for (x, y) in o.get_x_y() {
+                    if x == coord.0 && y == coord.1{
+                        return true
+                    }
+                };
+                false
+                // let (x, y)= o.get_x_y().first().unwrap().clone();
+                // log(file!(), line!().to_string().as_str(), o.get_symbol().to_string().as_str());
+                // log(file!(), line!().to_string().as_str(), ("x: ".to_string()+x.to_string().as_str()).as_str());
+                // log(file!(), line!().to_string().as_str(), ("y: ".to_string()+y.to_string().as_str()).as_str());
+                // if x == coord.0 && y == coord.1{
+                //     true
+                // } else {
+                //     false
+                // }
             }).collect();
             log(file!(), line!().to_string().as_str(), "Conflict Number:!");
             log(file!(), line!().to_string().as_str(), conflict.len().to_string().as_str());
@@ -151,16 +155,16 @@ impl Map {
             for idx in 0..conflict.len(){
                 for be_react in 0..conflict.len(){
                     log(file!(), line!().to_string().as_str(), "Conflict!");
-                    if idx == be_react {
+                    if idx == be_react && conflict.len() > 1 {
                         log(file!(), line!().to_string().as_str(), "FOOD");
                         continue;
                     }
 
                     //TODO:: use trigger_effect and apply the effect
                     let a = conflict[idx].trigger_effect();
-                    let b = conflict[be_react].trigger_effect();
+                    // let b = conflict[be_react].trigger_effect();
 
-                    conflict[idx].apply_effect(b);
+                    // conflict[idx].apply_effect(b);
                     conflict[be_react].apply_effect(a);
                     log(file!(), line!().to_string().as_str(), "It is handled");
                 }
