@@ -127,10 +127,10 @@ impl Snake {
         let (x, y) = vec_xy.first().unwrap();
         match self.direction {
             Snake_direction::Up => {
-                self.set_x_y(*x, (self.properties.right + *y - 1) % self.properties.right)
+                self.set_x_y(*x, (self.properties.bottom + *y - 1) % self.properties.bottom)
             }
             Snake_direction::Down => {
-                self.set_x_y(*x, (self.properties.right + *y + 1) % self.properties.right)
+                self.set_x_y(*x, (self.properties.bottom + *y + 1) % self.properties.bottom)
             }
             Snake_direction::Left => {
                 self.set_x_y((self.properties.right + *x - 1) % self.properties.right, *y)
