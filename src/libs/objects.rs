@@ -201,19 +201,31 @@ impl Object_ops for Snake {
                 // wasd for moving
                 match key {
                     event::KeyCode::Char('w') => {
-                        self.direction = Snake_direction::Up;
+                        if let Snake_direction::Down = self.direction { }
+                        else {
+                            self.direction = Snake_direction::Up;
+                        }
                         self.move_by_direction();
                     }
                     event::KeyCode::Char('s') => {
-                        self.direction = Snake_direction::Down;
+                        if let Snake_direction::Up = self.direction { }
+                        else {
+                            self.direction = Snake_direction::Down;
+                        }
                         self.move_by_direction();
                     }
                     event::KeyCode::Char('a') => {
-                        self.direction = Snake_direction::Left;
+                        if let Snake_direction::Right = self.direction { }
+                        else {
+                            self.direction = Snake_direction::Left;
+                        }
                         self.move_by_direction();
                     }
                     event::KeyCode::Char('d') => {
-                        self.direction = Snake_direction::Right;
+                        if let Snake_direction::Left = self.direction { }
+                        else {
+                            self.direction = Snake_direction::Right;
+                        }
                         self.move_by_direction();
                     }
                     _ => {}
