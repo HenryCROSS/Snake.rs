@@ -1,11 +1,9 @@
-use std::{collections::VecDeque, sync::Mutex};
+use std::{collections::VecDeque, fmt, sync::Mutex};
 
 use crossterm::event;
 use lazy_static::lazy_static;
 
-use crate::actions;
-
-use super::{actions::Actions_State, events::Input_Events};
+use super::{debug::log, effects::Effect, events::Input_Events};
 
 lazy_static! {
     static ref NUM: Mutex<u64> = Mutex::new(0);
@@ -16,12 +14,25 @@ pub enum State {
     Killed,
 }
 
+impl fmt::Display for State {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            State::Alive => write!(f, "Alive"),
+            State::Killed => write!(f, "Killed"),
+        }
+    }
+}
+
 struct Object {
     id: u64,
     name: String,
     symbol: char,
     state: State,
     weights: i64,
+    top: i32,
+    bottom: i32,
+    left: i32,
+    right: i32,
 }
 
 fn id_generator() -> u64 {
@@ -37,6 +48,7 @@ pub trait Object_ops {
      */
     fn get_x_y(&self) -> Vec<(i32, i32)>;
     fn set_x_y(&mut self, x: i32, y: i32);
+    fn set_edge(&mut self, top: i32, bottom: i32, left: i32, right: i32);
 
     fn get_symbol(&self) -> char;
 
@@ -51,31 +63,81 @@ pub trait Object_ops {
     fn get_weights(&self) -> i64;
     fn set_weights(&mut self, weights: i64);
 
-    fn do_actions(&mut self, e: &Input_Events) -> Result<(), String> {
+    fn do_actions(&mut self, _e: &Input_Events) -> Result<(), String> {
         Ok(())
     }
 
-    fn conflict(&mut self, obj: Box<dyn Object_ops>){}
+    fn trigger_effect(&mut self) -> Effect {
+        Effect::None
+    }
+    fn apply_effect(&mut self, effect: Effect) {}
+}
+
+enum Snake_direction {
+    Up,
+    Down,
+    Left,
+    Right,
+    None,
 }
 
 pub struct Snake {
     properties: Object,
+    direction: Snake_direction,
     body: VecDeque<(i32, i32)>,
 }
 
 impl Snake {
-    pub fn new(x: i32, y: i32, state: State, name: String, symbol: char) -> Self {
+    pub fn new(
+        x: i32,
+        y: i32,
+        state: State,
+        name: String,
+        symbol: char,
+        top: i32,
+        bottom: i32,
+        left: i32,
+        right: i32,
+    ) -> Self {
         let properties = Object {
             name,
             symbol,
             state,
             id: id_generator(),
             weights: 10,
+            top,
+            bottom,
+            left,
+            right,
         };
 
         let mut body = VecDeque::new();
         body.push_front((x, y));
-        Snake { properties, body }
+        Snake {
+            properties,
+            body,
+            direction: Snake_direction::None,
+        }
+    }
+
+    pub fn move_by_direction(&mut self) {
+        let vec_xy = self.get_x_y();
+        let (x, y) = vec_xy.first().unwrap();
+        match self.direction {
+            Snake_direction::Up => {
+                self.set_x_y(*x, (self.properties.right + *y - 1) % self.properties.right)
+            }
+            Snake_direction::Down => {
+                self.set_x_y(*x, (self.properties.right + *y + 1) % self.properties.right)
+            }
+            Snake_direction::Left => {
+                self.set_x_y((self.properties.right + *x - 1) % self.properties.right, *y)
+            }
+            Snake_direction::Right => {
+                self.set_x_y((self.properties.right + *x + 1) % self.properties.right, *y)
+            }
+            Snake_direction::None => self.set_x_y(*x, *y),
+        }
     }
 }
 
@@ -133,30 +195,61 @@ impl Object_ops for Snake {
                 // wasd for moving
                 match key {
                     event::KeyCode::Char('w') => {
-                        self.set_x_y(x, y - 1);
+                        self.direction = Snake_direction::Up;
+                        self.move_by_direction();
                     }
                     event::KeyCode::Char('s') => {
-                        self.set_x_y(x, y + 1);
+                        self.direction = Snake_direction::Down;
+                        self.move_by_direction();
                     }
                     event::KeyCode::Char('a') => {
-                        self.set_x_y(x - 1, y);
+                        self.direction = Snake_direction::Left;
+                        self.move_by_direction();
                     }
                     event::KeyCode::Char('d') => {
-                        self.set_x_y(x + 1, y);
+                        self.direction = Snake_direction::Right;
+                        self.move_by_direction();
                     }
                     _ => {}
                 }
             };
         } else {
             // When tick
-            // unimplemented!();
+            self.move_by_direction();
         }
 
         Ok(())
     }
 
-    fn conflict(&mut self, obj: Box<dyn Object_ops>) {
-        
+    fn apply_effect(&mut self, effect: Effect) {
+        if let Effect::Eat = effect {
+            let vec_xy = self.get_x_y();
+            let (x, y) = vec_xy.first().unwrap();
+            match self.direction {
+                Snake_direction::Up => {
+                    self.body.push_back((*x, (self.properties.right + *y + 1) % self.properties.right))
+                }
+                Snake_direction::Down => {
+                    self.body.push_back((*x, (self.properties.right + *y - 1) % self.properties.right))
+                }
+                Snake_direction::Left => {
+                    self.body.push_back(((self.properties.right + *x + 1) % self.properties.right, *y))
+                    // self.set_x_y((self.properties.right + *x - 1) % self.properties.right, *y)
+                }
+                Snake_direction::Right => {
+                    self.body.push_back(((self.properties.right + *x - 1) % self.properties.right, *y))
+                    // self.set_x_y((self.properties.right + *x + 1) % self.properties.right, *y)
+                }
+                Snake_direction::None => {},
+            }
+        }
+    }
+
+    fn set_edge(&mut self, top: i32, bottom: i32, left: i32, right: i32) {
+        self.properties.top = top;
+        self.properties.bottom = bottom;
+        self.properties.left = left;
+        self.properties.right = right;
     }
 }
 
@@ -167,13 +260,27 @@ pub struct Food {
 }
 
 impl Food {
-    pub fn new(x: i32, y: i32, state: State, name: String, symbol: char) -> Self {
+    pub fn new(
+        x: i32,
+        y: i32,
+        state: State,
+        name: String,
+        symbol: char,
+        top: i32,
+        bottom: i32,
+        left: i32,
+        right: i32,
+    ) -> Self {
         let properties = Object {
             name,
             symbol,
             state,
             id: id_generator(),
             weights: 0,
+            top,
+            bottom,
+            left,
+            right,
         };
 
         Food { properties, x, y }
@@ -223,7 +330,24 @@ impl Object_ops for Food {
         self.properties.weights = weights;
     }
 
-    fn conflict(&mut self, obj: Box<dyn Object_ops>) {
-        self.properties.state = State::Killed;
+    fn trigger_effect(&mut self) -> Effect {
+        if let State::Killed = self.get_state() {
+            return Effect::None;
+        }
+
+        log(
+            file!(),
+            line!().to_string().as_str(),
+            ">>>>>>>>>>>>>>>>>.trigger FOOD effect",
+        );
+        self.set_state(State::Killed);
+        Effect::Eat
+    }
+
+    fn set_edge(&mut self, top: i32, bottom: i32, left: i32, right: i32) {
+        self.properties.top = top;
+        self.properties.bottom = bottom;
+        self.properties.left = left;
+        self.properties.right = right;
     }
 }
