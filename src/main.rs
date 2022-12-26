@@ -80,6 +80,11 @@ fn main() {
             "Object is updated by state",
         );
         map.update_by_fn(|map| {
+            let snake_num = map.get_obj_num(object_factory::GameObject::Snake);
+            if snake_num == 0 {
+                map.is_running = false;
+                return;
+            }
             let num = map.get_obj_num(object_factory::GameObject::Food);
             let (top, bottom, left, right) = map.get_map_properties();
             let mut rng = thread_rng();
